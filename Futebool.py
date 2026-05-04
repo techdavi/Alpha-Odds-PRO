@@ -1,154 +1,179 @@
 import streamlit as st
 import requests
 import pandas as pd
+import plotly.graph_objects as go
 from datetime import datetime
 
 # ==========================================
-# 1. SETUP INSTITUCIONAL (Layout Wide)
+# 0. CONFIGURAÇÃO DE NAVEGAÇÃO ESPACIAL
 # ==========================================
-st.set_page_config(page_title="Alpha Odds PRO", page_icon="🎯", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="ALPHA | NEURAL SCANNER", page_icon="📡", layout="wide")
 
-# Injetando um pouco de CSS para deixar os botões e painéis mais "Premium"
+# CSS DE OUTRO PLANETA
 st.markdown("""
     <style>
-    .stMetric { background-color: #1E1E1E; padding: 15px; border-radius: 8px; border-left: 4px solid #00FF00;}
-    .css-1d391kg { padding-top: 1rem; }
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;900&display=swap');
+    
+    /* Fundo e Container */
+    .main { background-color: #05070a; color: #e0e0e0; }
+    [data-testid="stSidebar"] { background-color: #0a0c10; border-right: 1px solid #00f2ff; }
+    
+    /* Tipografia Estelar */
+    h1, h2, h3 { font-family: 'Orbitron', sans-serif !important; letter-spacing: 2px; }
+    .stMarkdown, p, span { font-family: 'JetBrains Mono', monospace; }
+    
+    /* Efeito de Vidro nos Cards */
+    .metric-card {
+        background: rgba(10, 20, 30, 0.7);
+        border: 1px solid #00f2ff;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);
+        text-align: center;
+    }
+    
+    /* Glow de sinal ativo */
+    .signal-active {
+        border: 2px solid #00ff41;
+        box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+    /* Botões Alpha */
+    .stButton>button {
+        width: 100%;
+        background: linear-gradient(45deg, #00f2ff, #0066ff);
+        color: white;
+        border: none;
+        font-family: 'Orbitron';
+        font-weight: bold;
+        transition: 0.3s;
+    }
+    .stButton>button:hover { box-shadow: 0 0 20px #00f2ff; transform: scale(1.02); }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. BARRA LATERAL (CENTRAL DE COMANDO)
+# 1. SEGURANÇA E CONEXÃO (INVISIBLE ENGINE)
+# ==========================================
+try:
+    API_TOKEN = st.secrets["SPORTMONKS_TOKEN"]
+except:
+    API_TOKEN = st.sidebar.text_input("🔑 ACESSO AO NÚCLEO", type="password")
+
+# ==========================================
+# 2. SIDEBAR - COMANDO DE MISSÃO
 # ==========================================
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2422/2422160.png", width=60) # Ícone de radar
-    st.title("⚙️ Painel de Controle")
+    st.markdown("<h1 style='color: #00f2ff; font-size: 20px;'>ALPHA ENGINE v.X</h1>", unsafe_allow_html=True)
     st.markdown("---")
-    
-    # Campo de senha mascarado (mais seguro)
-    API_TOKEN = st.text_input("🔑 Sportmonks Token", type="password", help="Cole sua chave da API aqui")
-    
-    # Máquina do tempo: escolhe o dia da varredura
-    data_alvo = st.date_input("📅 Data da Varredura", datetime.today())
-    
-    # Sensibilidade do Sniper
-    gatilho_sniper = st.slider("🎯 Confiança Mínima (%)", min_value=50, max_value=95, value=70, step=5)
-    
+    data_operacao = st.date_input("🛰️ CICLO TEMPORAL", datetime.today())
+    gatilho_confianca = st.slider("🎯 PRECISÃO QUÂNTICA", 50, 95, 75, 5)
     st.markdown("---")
-    st.caption("Alpha Odds Analytics © 2026")
+    st.write("🌌 **GALÁXIA:** Atacado/Finanças")
+    st.write("🥋 **ESTADO:** Em Combate")
+    if st.button("REINICIAR VARREDURA"):
+        st.cache_data.clear()
 
 # ==========================================
-# 3. CABEÇALHO PRINCIPAL
-# ==========================================
-st.title("🎯 Alpha Odds | Institutional Scanner")
-st.markdown("*Monitoramento algorítmico de assimetrias. Buscando o Edge em tempo real.*")
-
-# ==========================================
-# 4. MOTOR DE BUSCA
+# 3. LÓGICA DE DADOS (O CÉREBRO)
 # ==========================================
 @st.cache_data(ttl=300)
-def buscar_jogos(data_formatada, token):
-    if not token:
-        return []
-    
-    url = f"https://api.sportmonks.com/v3/football/fixtures/date/{data_formatada}"
-    parametros = {
-        "api_token": token,
-        "include": "odds.market;participants",
-        "filters": "markets:1;bookmakers:2"
-    }
-    
+def fetch_alpha_data(data_target):
+    url = f"https://api.sportmonks.com/v3/football/fixtures/date/{data_target}"
+    params = {"api_token": API_TOKEN, "include": "odds.market;participants", "filters": "markets:1;bookmakers:2"}
     try:
-        response = requests.get(url, params=parametros)
-        if response.status_code == 200:
-            return response.json().get("data", [])
-        else:
-            st.sidebar.error(f"Erro API: {response.status_code}")
-            return []
-    except Exception as e:
-        st.sidebar.error("Falha de conexão.")
-        return []
-
-# Executa a busca se tiver o Token
-jogos = []
-if API_TOKEN:
-    jogos = buscar_jogos(data_alvo.strftime('%Y-%m-%d'), API_TOKEN)
-else:
-    st.info("👈 Insira sua chave (Token) no menu lateral para iniciar o sistema.")
-    st.stop() # Trava o painel até a chave ser colocada
+        r = requests.get(url, params=params)
+        return r.json().get("data", [])
+    except: return []
 
 # ==========================================
-# 5. PROCESSAMENTO DE DADOS E TABELA
+# 4. INTERFACE DE OUTRO MUNDO
 # ==========================================
-lista_sinais = []
-tabela_geral = []
+if not API_TOKEN:
+    st.warning("⚠️ SISTEMA BLOQUEADO. AGUARDANDO CHAVE DE CRIPTOGRAFIA.")
+    st.stop()
 
-for jogo in jogos:
-    nome = jogo.get("name", "Desconhecido")
+jogos = fetch_alpha_data(data_operacao.strftime('%Y-%m-%d'))
+
+# HEADER DE ALTO IMPACTO
+c1, c2 = st.columns([3, 1])
+with c1:
+    st.title("📡 NEURAL MARKET SCANNER")
+    st.markdown(f"<span style='color: #00f2ff;'>SISTEMA ATIVO // {data_operacao.strftime('%A, %d %b %Y')}</span>", unsafe_allow_html=True)
+
+# KPIs ESTILIZADOS
+kpi1, kpi2, kpi3 = st.columns(3)
+with kpi1:
+    st.markdown(f"<div class='metric-card'><h3>ALVOS</h3><h1 style='color:#00f2ff;'>{len(jogos)}</h1></div>", unsafe_allow_html=True)
+
+# Processamento de Sinais
+sinais = []
+for j in jogos:
+    pc = pf = 0.0
+    oc = of = 0.0
+    for o in j.get("odds", []):
+        if str(o.get("label")) in ["Home", "1"]:
+            oc = float(o.get("value", 0))
+            pc = float(str(o.get("probability", "0")).replace("%",""))
+        if str(o.get("label")) in ["Away", "2"]:
+            of = float(o.get("value", 0))
+            pf = float(str(o.get("probability", "0")).replace("%",""))
     
-    odd_casa = odd_fora = odd_empate = 0.0
-    prob_casa = prob_fora = 0.0
-    
-    for odd in jogo.get("odds", []):
-        label = str(odd.get("label", ""))
-        if label in ["Home", "1"]:
-            odd_casa = float(odd.get("value", 0))
-            prob_str = str(odd.get("probability", "0%")).replace('%', '')
-            prob_casa = float(prob_str) if prob_str else 0.0
-        elif label in ["Away", "2"]:
-            odd_fora = float(odd.get("value", 0))
-            prob_str = str(odd.get("probability", "0%")).replace('%', '')
-            prob_fora = float(prob_str) if prob_str else 0.0
-        elif label in ["Draw", "X"]:
-            odd_empate = float(odd.get("value", 0))
-            
-    # Guarda tudo para a tabela geral
-    tabela_geral.append({
-        "Jogo": nome,
-        "Odd Casa": odd_casa,
-        "Odd Empate": odd_empate,
-        "Odd Fora": odd_fora,
-        "Chance Casa": f"{prob_casa}%",
-        "Chance Fora": f"{prob_fora}%"
-    })
+    if pc >= gatilho_confianca: sinais.append({"nome": j['name'], "direcao": "CASA", "odd": oc, "prob": pc})
+    if pf >= gatilho_confianca: sinais.append({"nome": j['name'], "direcao": "FORA", "odd": of, "prob": pf})
 
-    # Filtra os sinais de acordo com o slider do usuário
-    if prob_casa >= gatilho_sniper:
-        lista_sinais.append({"jogo": nome, "lado": "CASA", "odd": odd_casa, "prob": prob_casa})
-    elif prob_fora >= gatilho_sniper:
-        lista_sinais.append({"jogo": nome, "lado": "FORA", "odd": odd_fora, "prob": prob_fora})
+with kpi2:
+    st.markdown(f"<div class='metric-card'><h3>SINAIS</h3><h1 style='color:#00ff41;'>{len(sinais)}</h1></div>", unsafe_allow_html=True)
+with kpi3:
+    st.markdown(f"<div class='metric-card'><h3>RISCO</h3><h1 style='color:#ff004c;'>{100-gatilho_confianca}%</h1></div>", unsafe_allow_html=True)
 
-# ==========================================
-# 6. DASHBOARD (MÉTRICAS NO TOPO)
-# ==========================================
-col1, col2, col3 = st.columns(3)
-col1.metric("Radar Ativo", f"{len(jogos)} Jogos", "Hoje")
-col2.metric("Oportunidades Alpha", len(lista_sinais), f"Acima de {gatilho_sniper}%")
+st.markdown("<br>", unsafe_allow_html=True)
 
-maior_odd_alpha = max([s['odd'] for s in lista_sinais]) if lista_sinais else 0
-col3.metric("Maior Odd Detectada", maior_odd_alpha, "Valor Alpha")
+# ÁREA DE SINAIS (GRID DINÂMICO)
+aba_sinais, aba_radar = st.tabs(["⚡ GATILHOS ALPHA", "🌐 RADAR COMPLETO"])
 
-st.markdown("---")
-
-# ==========================================
-# 7. ABAS DO SISTEMA
-# ==========================================
-aba1, aba2 = st.tabs(["🟢 Sinais Sniper", "📋 Mercado Completo"])
-
-with aba1:
-    st.subheader(f"Gatilhos de Entrada (> {gatilho_sniper}%)")
-    if not lista_sinais:
-        st.warning("Mercado lateralizado/Sem assimetrias claras hoje. Preserve o capital.")
+with aba_sinais:
+    if not sinais:
+        st.markdown("<div style='text-align:center; padding: 50px;'><h4>AGUARDANDO ONDAS DE ASSIMETRIA...</h4></div>", unsafe_allow_html=True)
     else:
-        for sinal in lista_sinais:
+        for s in sinais:
+            # Gráfico de Gauge para cada sinal
+            fig = go.Figure(go.Indicator(
+                mode = "gauge+number",
+                value = s['prob'],
+                domain = {'x': [0, 1], 'y': [0, 1]},
+                title = {'text': f"CONFIANÇA: {s['prob']}%", 'font': {'size': 14, 'color': '#00f2ff'}},
+                gauge = {
+                    'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "#00f2ff"},
+                    'bar': {'color': "#00ff41"},
+                    'bgcolor': "rgba(0,0,0,0)",
+                    'borderwidth': 2,
+                    'bordercolor': "#00f2ff",
+                    'steps': [{'range': [0, 100], 'color': 'rgba(0, 242, 255, 0.1)'}]
+                }
+            ))
+            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=200, margin=dict(l=20, r=20, t=40, b=20))
+
             with st.container():
-                c1, c2 = st.columns([3, 1])
-                c1.success(f"**Alvo:** {sinal['jogo']} | **Entrada:** Vitória {sinal['lado']}")
-                c2.info(f"**Odd:** {sinal['odd']} (Confiança: {sinal['prob']}%)")
+                col_info, col_chart = st.columns([2, 1])
+                with col_info:
+                    st.markdown(f"""
+                        <div class='metric-card signal-active' style='text-align: left;'>
+                            <h2 style='margin:0; font-size: 22px;'>🎯 ALVO IDENTIFICADO: {s['nome']}</h2>
+                            <h3 style='color: #00ff41;'>DIREÇÃO: VITÓRIA {s['direcao']}</h3>
+                            <h4 style='margin:0;'>ODD ATUAL: {s['odd']}</h4>
+                        </div>
+                    """, unsafe_allow_html=True)
+                with col_chart:
+                    st.plotly_chart(fig, use_container_width=True)
 
-with aba2:
-    st.subheader("Livro de Ofertas (Todos os Jogos)")
-    if tabela_geral:
-        df = pd.DataFrame(tabela_geral)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-    else:
-        st.write("Nenhum dado disponível para compilar a tabela.")
+with aba_radar:
+    # Tabela com visual Matrix
+    if jogos:
+        radar_data = []
+        for j in jogos:
+            # Simples processamento para a tabela
+            radar_data.append({"ALVO": j['name'], "START": j.get('starting_at')})
+        st.dataframe(pd.DataFrame(radar_data), use_container_width=True)
